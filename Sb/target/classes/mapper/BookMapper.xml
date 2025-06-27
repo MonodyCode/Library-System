@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.library.mapper.BookMapper">
+    
+    <resultMap id="BookResultMap" type="com.library.entity.Book">
+        <id property="id" column="id"/>
+        <result property="isbn" column="isbn"/>
+        <result property="title" column="title"/>
+        <result property="author" column="author"/>
+        <result property="publisher" column="publisher"/>
+        <result property="category" column="category"/>
+        <result property="price" column="price"/>
+        <result property="totalCount" column="total_count"/>
+        <result property="availableCount" column="available_count"/>
+        <result property="description" column="description"/>
+        <result property="coverImage" column="cover_image"/>
+        <result property="publishDate" column="publish_date"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+    
+    <insert id="insert" parameterType="com.library.entity.Book" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO books (isbn, title, author, publisher, category, price, total_count, available_count, 
+                          description, cover_image, publish_date, create_time, update_time)
+        VALUES (#{isbn}, #{title}, #{author}, #{publisher}, #{category}, #{price}, #{totalCount}, #{availableCount},
+                #{description}, #{coverImage}, #{publishDate}, #{createTime}, #{updateTime})
+    </insert>
+    
+    <select id="findById" resultMap="BookResultMap">
+        SELECT * FROM books WHERE id = #{id}
+    </select>
+    
+    <update id="update" parameterType="com.library.entity.Book">
+        UPDATE books SET
+        title = #{title},
+        author = #{author},
+        publisher = #{publisher},
+        category = #{category},
+        price = #{price},
+        total_count = #{totalCount},
+        available_count = #{availableCount},
+        description = #{description},
+        cover_image = #{coverImage},
+        publish_date = #{publishDate},
+        update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+    
+    <delete id="deleteById">
+        DELETE FROM books WHERE id = #{id}
+    </delete>
+    
+    <select id="findByPage" resultMap="BookResultMap">
+        SELECT * FROM books
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%') 
+                OR author LIKE CONCAT('%', #{keyword}, '%')
+                OR isbn LIKE CONCAT('%', #{keyword}, '%')
+                OR description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="category != null and category != ''">
+                AND category = #{category}
+            </if>
+            <if test="author != null and author != ''">
+                AND author LIKE CONCAT('%', #{author}, '%')
+            </if>
+            <if test="publisher != null and publisher != ''">
+                AND publisher LIKE CONCAT('%', #{publisher}, '%')
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+    
+    <select id="findByIsbn" resultMap="BookResultMap">
+        SELECT * FROM books WHERE isbn = #{isbn}
+    </select>
+    
+    <select id="searchBooks" resultMap="BookResultMap">
+        SELECT * FROM books
+        WHERE title LIKE CONCAT('%', #{keyword}, '%') 
+        OR author LIKE CONCAT('%', #{keyword}, '%')
+        OR isbn LIKE CONCAT('%', #{keyword}, '%')
+        OR description LIKE CONCAT('%', #{keyword}, '%')
+        OR category LIKE CONCAT('%', #{keyword}, '%')
+        OR publisher LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY create_time DESC
+        LIMIT 20
+    </select>
+    
+    <select id="getAllCategories" resultType="string">
+        SELECT DISTINCT category FROM books WHERE category IS NOT NULL AND category != '' ORDER BY category
+    </select>
+    
+    <select id="countBooks" resultType="int">
+        SELECT COUNT(*) FROM books
+    </select>
+    
+    <update id="updateAvailableCount">
+        UPDATE books SET available_count = #{count}, update_time = NOW() WHERE id = #{id}
+    </update>
+    
+    <select id="getPopularBooks" resultMap="BookResultMap">
+        SELECT b.*, COALESCE(br.borrow_count, 0) as borrow_count
+        FROM books b
+        LEFT JOIN (
+            SELECT book_id, COUNT(*) as borrow_count
+            FROM borrow_records
+            GROUP BY book_id
+        ) br ON b.id = br.book_id
+        ORDER BY borrow_count DESC, b.create_time DESC
+        LIMIT #{limit}
+    </select>
+    
+</mapper>
